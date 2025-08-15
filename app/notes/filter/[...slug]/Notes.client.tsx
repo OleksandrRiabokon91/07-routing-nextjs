@@ -1,7 +1,7 @@
-// app/notes/page.tsx
+// app/notes/filter/[...slug]/Notes.client.tsx
 "use client";
 
-import css from "@/app/notes/Notes.client.module.css";
+import css from "@/app/notes/filter/[...slug]/Notes.client.module.css";
 
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
@@ -14,15 +14,20 @@ import NoteForm from "@/components/NoteForm/NoteForm";
 import SearchBox from "@/components/SearchBox/SearchBox";
 import Loader from "@/components/Loader/Loader";
 import ErrorMessage from "@/components/ErrorMessage/ErrorMessage";
+import { Tag } from "@/types/note";
 
 import fetchNotes from "@/lib/api";
 import type { FetchNotesResponse } from "@/lib/api";
 
 interface NotesClientProps {
   initialData: FetchNotesResponse;
+  selectedTag?: Tag | undefined;
 }
 
-export default function NotesClient({ initialData }: NotesClientProps) {
+export default function NotesClient({
+  initialData,
+  selectedTag,
+}: NotesClientProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -30,16 +35,23 @@ export default function NotesClient({ initialData }: NotesClientProps) {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearchQuery]);
+  }, [debouncedSearchQuery, selectedTag]);
 
   const { data, isLoading, isError, error } = useQuery<FetchNotesResponse>({
-    queryKey: ["notes", currentPage, debouncedSearchQuery],
+    queryKey: ["notes", currentPage, debouncedSearchQuery, selectedTag],
     queryFn: () =>
-      fetchNotes({ page: currentPage, search: debouncedSearchQuery }),
+      fetchNotes({
+        page: currentPage,
+        search: debouncedSearchQuery,
+        ...(selectedTag && selectedTag !== undefined
+          ? { tag: selectedTag }
+          : {}),
+        tag: selectedTag,
+      }),
     refetchOnMount: false,
 
     placeholderData:
-      currentPage === 1 && debouncedSearchQuery === ""
+      currentPage === 1 && debouncedSearchQuery === "" && !selectedTag
         ? initialData
         : keepPreviousData,
   });
